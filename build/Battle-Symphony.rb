@@ -1,63 +1,3 @@
-#==============================================================================
-# 
-# Å• Yami Engine Symphony - Battle Symphony
-# -- Version: 1.00 (2012.10.20)
-# -- Level: Easy, Normal, Hard, Very Hard
-# -- Requires: YEA - Battle Engine
-# 
-#==============================================================================
-
-$imported = {} if $imported.nil?
-$imported["YES-BattleSymphony"] = true
-
-#==============================================================================
-# Å• Updates
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# 2012.10.20 - Finished Script.
-# 2012.07.01 - Started Script.
-# 
-#==============================================================================
-# Å• Introduction
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Core Engine of Symphony. This script provides a complicated visual battle
-# which can be customized and many add-on awaited in the future.
-# -----------------------------------------------------------------------------
-# There are 8 Sections of Script:
-# 
-# Section I. Basic Settings (S-01)
-# Section II. Default Actions (S-02)
-# Section III. AutoSymphony (S-03)
-# Section IV. Default Symphony Tags (S-04)
-# Section V. Imports Symphony Tags (S-05)
-# Section VI. Sprites Initialization (S-06)
-# Section VII. Icons Sprites Initialization (S-07)
-# Section VIII. Core Script (S-08)
-#
-# You can search these sections by the code next to them (S-xx).
-#
-#==============================================================================
-# Å• Compatibility
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# This script is made strictly for RPG Maker VX Ace. It is highly unlikely that
-# it will run with RPG Maker VX without adjusting.
-# 
-#==============================================================================
-# Å• Credits
-# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-# Symphony Tags: Yanfly (From his Melody Tags).
-# Inspired: Yanfly, Nessiah, EvilEagles.
-# Testers: Many Guys in RPG Maker Community.
-# Many Descriptions: Yanfly (From his Yanfly Engine Melody)
-# 
-#==============================================================================
-
-#==============================================================================
-# Section I. Basic Settings (S-01)
-# -----------------------------------------------------------------------------
-# These are all basic requirements for running Battle Engine Symphony.
-# Please pay attention to those settings before you touch and read next
-# sections and add-ons.
-#==============================================================================
 module SYMPHONY
   module View
     # Set this to false to set Battle View to Empty.
@@ -78,7 +18,8 @@ module SYMPHONY
       0 =>  [480, 224],
       1 =>  [428, 244],
       2 =>  [472, 264],
-      3 =>  [422, 284],
+      3 =>  [422, 244],
+      4 =>  [452, 284],
     } # End.
   end # View
   module Visual
@@ -93,19 +34,22 @@ module SYMPHONY
     
     # Set this to true to enable shadow beneath battler.
     BATTLER_SHADOW = true
+    
+    # Enemies default attack animation ID.
+    # First Attack Animation and Second Attack Animation can be defined by
+    # notetags <atk ani 1: x> and <atk ani 2: x> respectively.
+    ENEMY_ATTACK_ANIMATION = 1
+    
   end # Visual
+  module Fixes
+    # Set this to false to disable auto turn-off the immortal flag. Many people
+    # forgot to turn-off immortal flag in an actions sequence, so the targets
+    # remain alive even their HP reach zero.
+    # Auto Turn-off Immortal will be push to Finish Actions.
+    AUTO_IMMORTAL_OFF = true
+    
+  end # Fixes
 end # SYMPHONY
-
-#==============================================================================
-# Section II. Default Actions (S-02)
-# -----------------------------------------------------------------------------
-# These are all Default Actions of Symphony. There are Magic Action, 
-# Physical Action, Item Action and some Misc Actions. If You are really
-# good at Symphony Tags and want to customize all of these actions, please
-# pay attention here.
-# Note: You can use Symphony Tags in each skills so You don't have to check
-# this if these actions settings are good for You.
-#==============================================================================
 module SYMPHONY
   module DEFAULT_ACTIONS
       
@@ -130,9 +74,9 @@ module SYMPHONY
     ] # Do not remove this.
     MAGIC_FOLLOW =[
       ["WAIT FOR MOVE"],
-      ["IMMORTAL", ["TARGETS", "FALSE"]],
     ] # Do not remove this.
     MAGIC_FINISH =[
+      ["IMMORTAL", ["TARGETS", "FALSE"]],
       ["AUTO SYMPHONY", ["RETURN ORIGIN"]],
       ["WAIT FOR MOVE"],
       ["WAIT", ["12", "SKIP"]],
@@ -159,12 +103,12 @@ module SYMPHONY
       ["AUTO SYMPHONY", ["SINGLE SWING"]],
       ["AUTO SYMPHONY", ["SKILL FULL", "unless attack"]],
       ["AUTO SYMPHONY", ["ATTACK FULL", "if attack"]],
-      ["IMMORTAL", ["TARGETS", "FALSE"]],
     ] # Do not remove this.
     PHYSICAL_FOLLOW =[
       ["WAIT FOR MOVE"],
     ] # Do not remove this.
     PHYSICAL_FINISH =[
+      ["IMMORTAL", ["TARGETS", "FALSE"]],
       ["ICON DELETE", ["USER", "WEAPON"]],
       ["AUTO SYMPHONY", ["RETURN ORIGIN"]],
       ["WAIT FOR MOVE"],
@@ -278,15 +222,22 @@ module SYMPHONY
       ["STANCE", ["REFLECT SUBJECT", "BREAK"]],
     ] # Do not remove this.
     
+    #==========================================================================
+    # Substitute Action
+    # -------------------------------------------------------------------------
+    # This is the reflect action. This action will be played when a battler
+    # reflects a magic.
+    #==========================================================================
+    SUBSTITUTE_ACTION = [
+      ["TELEPORT SUBSTITUTE SUBJECT", ["TARGET", "BODY", "WAIT"]],
+    ] # Do not remove this.
+    
+    SUBSTITUTE_END_ACTION = [
+      ["TELEPORT SUBSTITUTE SUBJECT", ["ORIGIN", "WAIT"]],
+    ] # Do not remove this.
+    
   end # DEFAULT_ACTIONS
 end # SYMPHONY
-
-#==============================================================================
-# Section III. AutoSymphony (S-03)
-# -----------------------------------------------------------------------------
-# These are all Settings of AutoSymphony. You can make a sequence of Actions
-# and Symphony Tags and reuse it with a single tag: AutoSymphony.
-#==============================================================================
 module SYMPHONY
   AUTO_SYMPHONY = { # Start
     # "Key" => [Symphony Sequence],
@@ -400,7 +351,8 @@ module SYMPHONY
     # This is a default-used AutoSymphony. Do not remove this.
     #-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     "SKILL FULL COUNTER" => [
-      ["LAST ANIMATION", ["TARGETS", "WAIT"]],
+      ["ATTACK ANIMATION", ["TARGETS", "WAIT", "if attack"]],
+      ["SKILL ANIMATION", ["TARGETS", "WAIT", "unless attack"]],
       ["SKILL EFFECT", ["WHOLE"]],
       ["MOVE TARGETS", ["BACKWARD", "unless skill.for_friend?"]],
     ], # end SKILL FULL COUNTER
@@ -427,19 +379,228 @@ module SYMPHONY
     
   } # Do not remove this.
 end # SYMPHONY
+#==============================================================================
+# ‚ñ† Regular Expression
+#==============================================================================
+
+module REGEXP
+  module SYMPHONY
+    SETUP_ANI_ON   = /<(?:SETUP_ACTION|setup action|setup)>/i
+    SETUP_ANI_OFF  = /<\/(?:SETUP_ACTION|setup action|setup)>/i
+    WHOLE_ANI_ON   = /<(?:WHOLE_ACTION|whole action|whole)>/i
+    WHOLE_ANI_OFF  = /<\/(?:WHOLE_ACTION|whole action|whole)>/i
+    TARGET_ANI_ON  = /<(?:TARGET_ACTION|target action|target)>/i
+    TARGET_ANI_OFF = /<\/(?:TARGET_ACTION|target action|target)>/i
+    FOLLOW_ANI_ON  = /<(?:FOLLOW_ACTION|follow action|follow)>/i
+    FOLLOW_ANI_OFF = /<\/(?:FOLLOW_ACTION|follow action|follow)>/i
+    FINISH_ANI_ON  = /<(?:FINISH_ACTION|finish action|finish)>/i
+    FINISH_ANI_OFF = /<\/(?:FINISH_ACTION|finish action|finish)>/i
+    
+    SYMPHONY_TAG_NONE = /[ ]*(.*)/i
+    SYMPHONY_TAG_VALUES = /[ ]*(.*):[ ]*(.*)/i
+    
+    ATK_ANI1 = /<(?:ATK_ANI_1|atk ani 1):[ ]*(\d+)>/i
+    ATK_ANI2 = /<(?:ATK_ANI_2|atk ani 2):[ ]*(\d+)>/i
+
+  end
+end
+
+# Scan values: /\w+[\s*\w+]*/i
 
 #==============================================================================
-# Section IV. Default Symphony Tags (S-04)
-# -----------------------------------------------------------------------------
-# These are all Default Symphony Tags. They define actions that will be played
-# when the tags are called. All these tags are optimized for the best
-# performance through testings.
-# -----------------------------------------------------------------------------
-# Do not edit anything below here unless You have read carefully the Tutorial
-# at Creating and Editing Symphony Tags.
+# ‚ñ† DataManager
 #==============================================================================
+
+module DataManager
+  
+  #--------------------------------------------------------------------------
+  # alias method: load_database
+  #--------------------------------------------------------------------------
+  class <<self; alias load_database_bes load_database; end
+  def self.load_database
+    load_database_bes
+    load_notetags_bes
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: load_notetags_bes
+  #--------------------------------------------------------------------------
+  def self.load_notetags_bes
+    groups = [$data_skills, $data_items, $data_weapons, $data_enemies]
+    groups.each { |group|
+      group.each { |obj|
+        next if obj.nil?
+        obj.battle_symphony_initialize
+      }
+    }
+  end
+  
+end # DataManager
+
 #==============================================================================
-# Å° Scene_Battle - Defines Tags Names
+# ‚ñ† RPG::BaseItem
+#==============================================================================
+
+class RPG::BaseItem
+  
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_accessor :setup_actions_list 
+  attr_accessor :whole_actions_list
+  attr_accessor :target_actions_list
+  attr_accessor :follow_actions_list
+  attr_accessor :finish_actions_list
+  attr_accessor :atk_animation_id1
+  attr_accessor :atk_animation_id2
+  
+  #--------------------------------------------------------------------------
+  # new method: battle_symphony_initialize
+  #--------------------------------------------------------------------------
+  def battle_symphony_initialize
+    create_default_animation
+    create_default_symphony
+    create_tags_symphony
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: create_default_animation
+  #--------------------------------------------------------------------------
+  def create_default_animation
+    @atk_animation_id1 = SYMPHONY::Visual::ENEMY_ATTACK_ANIMATION
+    @atk_animation_id2 = 0
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when REGEXP::SYMPHONY::ATK_ANI1
+        @atk_animation_id1 = $1.to_i
+      when REGEXP::SYMPHONY::ATK_ANI2
+        @atk_animation_id2 = $1.to_i
+      end
+    }
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: create_default_symphony
+  #--------------------------------------------------------------------------
+  def create_default_symphony
+    @setup_actions_list = []; @finish_actions_list = []
+    @whole_actions_list = []; @target_actions_list = []
+    @follow_actions_list = []
+    #---
+    if self.is_a?(RPG::Skill) and !self.physical?
+      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_SETUP
+      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_WHOLE
+      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_TARGET
+      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_FOLLOW
+      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_FINISH
+      return
+    elsif self.is_a?(RPG::Skill) and self.physical?
+      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_SETUP
+      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_WHOLE
+      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_TARGET
+      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_FOLLOW
+      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_FINISH
+      return
+    elsif self.is_a?(RPG::Item)
+      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_SETUP
+      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_WHOLE
+      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_TARGET
+      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_FOLLOW
+      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_FINISH
+      return
+    end
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: create_tags_symphony
+  #--------------------------------------------------------------------------
+  def create_tags_symphony
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when REGEXP::SYMPHONY::SETUP_ANI_ON
+        @symphony_tag = true
+        @setup_actions_list = []
+        @setup_action_flag = true
+      when REGEXP::SYMPHONY::SETUP_ANI_OFF
+        @symphony_tag = false
+        @setup_action_flag = false
+      when REGEXP::SYMPHONY::WHOLE_ANI_ON
+        @symphony_tag = true
+        @whole_actions_list = []
+        @whole_action_flag = true
+      when REGEXP::SYMPHONY::WHOLE_ANI_OFF
+        @symphony_tag = false
+        @whole_action_flag = false
+      when REGEXP::SYMPHONY::TARGET_ANI_ON
+        @symphony_tag = true
+        @target_actions_list = []
+        @target_action_flag = true
+      when REGEXP::SYMPHONY::TARGET_ANI_OFF
+        @symphony_tag = false
+        @target_action_flag = false
+      when REGEXP::SYMPHONY::FOLLOW_ANI_ON
+        @symphony_tag = true
+        @follow_actions_list = []
+        @follow_action_flag = true
+      when REGEXP::SYMPHONY::FOLLOW_ANI_OFF
+        @symphony_tag = false
+        @follow_action_flag = false
+      when REGEXP::SYMPHONY::FINISH_ANI_ON
+        @symphony_tag = true
+        @finish_actions_list = []
+        @finish_action_flag = true
+      when REGEXP::SYMPHONY::FINISH_ANI_OFF
+        @symphony_tag = false
+        @finish_action_flag = false
+      #---
+      else
+        next unless @symphony_tag
+        case line
+        when REGEXP::SYMPHONY::SYMPHONY_TAG_VALUES
+          action = $1
+          value = $2.scan(/[^, ]+[^,]*/i)
+        when REGEXP::SYMPHONY::SYMPHONY_TAG_NONE
+          action = $1
+          value = [nil]
+        else; next
+        end
+        array = [action, value]
+        if @setup_action_flag
+          @setup_actions_list.push(array)
+        elsif @whole_action_flag
+          @whole_actions_list.push(array)
+        elsif @target_action_flag
+          @target_actions_list.push(array)
+        elsif @follow_action_flag
+          @follow_actions_list.push(array)
+        elsif @finish_action_flag
+          @finish_actions_list.push(array)
+        end
+      end
+    }
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: valid_actions?
+  #--------------------------------------------------------------------------
+  def valid_actions?(phase)
+    case phase
+    when :setup
+      return @setup_actions_list.size > 0
+    when :whole
+      return @whole_actions_list.size > 0
+    when :target
+      return @target_actions_list.size > 0
+    when :follow
+      return @follow_actions_list.size > 0
+    when :finish
+      return @finish_actions_list.size > 0
+    end
+  end
+  
+end # RPG::BaseItem
+#==============================================================================
+# ‚ñ† Scene_Battle - Defines Tags Names
 #==============================================================================
 class Scene_Battle < Scene_Base
   
@@ -482,6 +643,12 @@ class Scene_Battle < Scene_Base
           
         when /ICON THROW[ ](.*)/i
           action_icon_throw
+          
+        when /IF[ ](.+)/i
+          action_condition
+          
+        when /JUMP[ ](.*)/i
+          action_move
                     
         when /MESSAGE/i
           action_message
@@ -497,6 +664,9 @@ class Scene_Battle < Scene_Base
           
         when /STANCE/i
           action_stance
+          
+        when /UNLESS[ ](.+)/i
+          action_condition
           
         when /TELEPORT[ ](.*)/i
           action_move
@@ -518,7 +688,7 @@ class Scene_Battle < Scene_Base
   
 end # Scene_Battle
 #==============================================================================
-# Å° Scene_Battle - Defines Tags Actions
+# ‚ñ† Scene_Battle - Defines Tags Actions
 #==============================================================================
 class Scene_Battle < Scene_Base
   
@@ -530,17 +700,36 @@ class Scene_Battle < Scene_Base
     targets = @action_targets
     user = @subject
     skill = item = @scene_item
-    attack = user.current_action.attack?
+    attack = false
+    if @counter_subject || (user.current_action && user.current_action.attack?)
+      attack = true
+    end
     weapons = user.weapons if user.actor?
-    return true if @action_values == nil
-    @action_values.each { |value|
-      case value
-      when /IF[ ](.*)/i
-        eval("return false unless " + $1.to_s.downcase)
-      when /UNLESS[ ](.*)/i
-        eval("return false if " + $1.to_s.downcase)
-      end
-    }
+    @action_condition ||= []
+    @action_condition.pop if @action.upcase == "END"
+    if @action_condition.size > 0
+      @action_condition.each { |action_condition|
+        action_condition =~ /(IF|UNLESS)[ ](.+)/i
+        condition_type = $1.upcase
+        condition_value = $2.downcase
+        #---
+        if condition_type == "IF"
+          return false unless eval(condition_value)
+        elsif condition_type == "UNLESS"
+          return false if eval(condition_value)
+        end
+      }
+    end
+    if @action_values
+      @action_values.each { |value|
+        case value
+        when /IF[ ](.*)/i
+          eval("return false unless " + $1.to_s.downcase)
+        when /UNLESS[ ](.*)/i
+          eval("return false if " + $1.to_s.downcase)
+        end
+      }
+    end
     return true
   end
   
@@ -558,6 +747,8 @@ class Scene_Battle < Scene_Base
       result = [@counter_subject]
     when /(?:REFLECT SUBJECT)/i
       result = [@reflect_subject]
+    when /(?:SUBSTITUTE SUBJECT)/i
+      result = [@substitute_subject]
     when /(?:ACTORS|PARTY|ACTORS LIVING)/i
       result = $game_party.alive_members
     when /(?:ALL ACTORS|ACTORS ALL)/i
@@ -618,6 +809,8 @@ class Scene_Battle < Scene_Base
         result = [@counter_subject]
       when /(?:REFLECT SUBJECT)/i
         result = [@reflect_subject]
+      when /(?:SUBSTITUTE SUBJECT)/i
+        result = [@substitute_subject]
       when /(?:ACTORS|PARTY|ACTORS LIVING)/i
         result = $game_party.alive_members
       when /(?:ALL ACTORS|ACTORS ALL)/i
@@ -714,6 +907,13 @@ class Scene_Battle < Scene_Base
     return unless @subject.alive?
     return unless @subject.current_action.item
     targets = @action_targets.uniq
+    #--- substitute ---
+    substitutes = []
+    targets.each { |target|
+      substitutes.push(target.friends_unit.substitute_battler)
+    }
+    substitutes = substitutes.uniq
+    #---
     item = @subject.current_action.item
     #---
     if @action_values.include?("CLEAR")
@@ -734,12 +934,21 @@ class Scene_Battle < Scene_Base
     array = ["perfect"] if @action_values.include?("PERFECT")
     @action_values.each {|value| array.push(value.downcase) unless ["PERFECT", "CALC"].include?(value)}
     array = ["calc", "dmg", "effect"] if @action_values.include?("WHOLE") || @action_values.size == 0
+    #--- substitute flag ---
+    if substitutes
+      substitutes.each { |substitute|
+        next unless substitute
+        substitute.result.clear_bes_flag
+        array.each {|value| str = "substitute.result.set_#{value}"; eval(str)}
+      }
+    end
     #---
-    targets.each {|target| 
+    targets.each { |target| 
       target.result.clear_bes_flag
       array.each {|value| str = "target.result.set_#{value}"; eval(str)}
       item.repeats.times { invoke_item(target, item) } 
       target.result.clear_change_target
+      @substitute_subject.result.clear_change_target if @substitute_subject
     }
   end
   
@@ -1000,6 +1209,14 @@ class Scene_Battle < Scene_Base
   end
   
   #--------------------------------------------------------------------------
+  # new method: action_condition
+  #--------------------------------------------------------------------------
+  def action_condition
+    @action_condition ||= []
+    @action_condition.push(@action.dup)
+  end
+  
+  #--------------------------------------------------------------------------
   # new method: action_message
   #--------------------------------------------------------------------------
   def action_message
@@ -1045,6 +1262,12 @@ class Scene_Battle < Scene_Base
         destination_y += @action_values[0] == "FORWARD" ? move_y : - move_y
         mover.face_coordinate(destination_x, destination_y) unless @action_values[0] == "BACKWARD"
         mover.create_movement(destination_x, destination_y, frames)
+        case @action.upcase
+        when /JUMP[ ](.*)/i
+          arc_scan = $1.scan(/(?:ARC)[ ](\d+)/i)
+          arc = $1.to_i
+          mover.create_jump(arc)
+        end
       }
     #---
     when "ORIGIN", "RETURN"
@@ -1055,12 +1278,20 @@ class Scene_Battle < Scene_Base
         destination_x = mover.origin_x
         destination_y = mover.origin_y
         next if destination_x == mover.screen_x && destination_y == mover.screen_y
-        mover.face_coordinate(destination_x, destination_y)
+        if @action_values[0] == "ORIGIN"
+          mover.face_coordinate(destination_x, destination_y)
+        end
         mover.create_movement(destination_x, destination_y, frames)
+        case @action.upcase
+        when /JUMP[ ](.*)/i
+          arc_scan = $1.scan(/(?:ARC)[ ](\d+)/i)
+          arc = $1.to_i
+          mover.create_jump(arc)
+        end
       }
     #---
     when "TARGET", "TARGETS", "USER"
-      frames = @action_values[1].to_i
+      frames = @action_values[2].to_i
       frames = 20 if frames <= 0
       #---
       case @action_values[0]
@@ -1081,15 +1312,15 @@ class Scene_Battle < Scene_Base
           side_d = target.screen_y
           movers.each { |mover|
             next unless mover.exist?
-            if side_l > mover.screen_x
+            if side_l > mover.origin_x
               destination_x -= target.sprite.width/2
               destination_x -= mover.sprite.width/2
-            elsif side_r < mover.screen_x
+            elsif side_r < mover.origin_x
               destination_x += target.sprite.width/2
               destination_x += mover.sprite.width/2
-            elsif side_u > mover.screen_y - mover.sprite.height
+            elsif side_u > mover.origin_y - mover.sprite.height
               destination_y -= target.sprite.height
-            elsif side_d < mover.screen_y - mover.sprite.height
+            elsif side_d < mover.origin_y - mover.sprite.height
               destination_y += mover.sprite.height
             end
           }
@@ -1105,15 +1336,15 @@ class Scene_Battle < Scene_Base
           side_d = target.screen_y
           movers.each { |mover|
             next unless mover.exist?
-            if side_l > mover.screen_x
+            if side_l > mover.origin_x
               destination_x -= target.sprite.width/2
               destination_x -= mover.sprite.width/2
-            elsif side_r < mover.screen_x
+            elsif side_r < mover.origin_x
               destination_x += target.sprite.width/2
               destination_x += mover.sprite.width/2
-            elsif side_u > mover.screen_y - mover.sprite.height
+            elsif side_u > mover.origin_y - mover.sprite.height
               destination_y -= target.sprite.height
-            elsif side_d < mover.screen_y - mover.sprite.height
+            elsif side_d < mover.origin_y - mover.sprite.height
               destination_y += mover.sprite.height
             end
             destination_y += mover.sprite.height
@@ -1141,21 +1372,53 @@ class Scene_Battle < Scene_Base
           side_d = target.screen_y
           movers.each { |mover|
             next unless mover.exist?
-            if side_l > mover.screen_x
+            if side_l > mover.origin_x
               destination_x -= target.sprite.width/2
               destination_x -= mover.sprite.width/2
-            elsif side_r < mover.screen_x
+            elsif side_r < mover.origin_x
               destination_x += target.sprite.width/2
               destination_x += mover.sprite.width/2
-            elsif side_u > mover.screen_y - mover.sprite.height
+            elsif side_u > mover.origin_y - mover.sprite.height
               destination_y -= target.sprite.height
-            elsif side_d < mover.screen_y - mover.sprite.height
+            elsif side_d < mover.origin_y - mover.sprite.height
               destination_y += mover.sprite.height
             end
             destination_y += mover.sprite.height
             destination_y -= mover.sprite.height/2
-            destination_y += mover.sprite.height if mover.use_8d? && target.use_hb?
-            destination_y -= mover.sprite.height/4 if mover.use_hb? && target.use_8d?
+            if $imported["BattleSymphony-8D"] && $imported["BattleSymphony-HB"]
+              destination_y += mover.sprite.height if mover.use_8d? && target.use_hb?
+              destination_y -= mover.sprite.height/4 if mover.use_hb? && target.use_8d?
+            end
+          }
+        }
+      #---
+      when "BACK"
+        targets.each { |target|
+          destination_x += target.screen_x
+          destination_y += target.screen_y - target.sprite.height
+          side_l = target.screen_x - target.sprite.width/2
+          side_r = target.screen_x + target.sprite.width/2
+          side_u = target.screen_y - target.sprite.height
+          side_d = target.screen_y
+          movers.each { |mover|
+            next unless mover.exist?
+            if side_l > mover.origin_x
+              destination_x += target.sprite.width/2
+              destination_x += mover.sprite.width/2
+            elsif side_r < mover.origin_x
+              destination_x -= target.sprite.width/2
+              destination_x -= mover.sprite.width/2
+            elsif side_u > mover.origin_y - mover.sprite.height
+              destination_y -= target.sprite.height
+            elsif side_d < mover.origin_y - mover.sprite.height
+              destination_y += mover.sprite.height
+            end
+            destination_y += mover.sprite.height
+            destination_y -= mover.sprite.height/2
+            if $imported["BattleSymphony-8D"] && $imported["BattleSymphony-HB"]
+              destination_y += mover.sprite.height if mover.use_8d? && target.use_hb?
+              destination_y -= mover.sprite.height/4 if mover.use_hb? && target.use_8d?
+            end
           }
         }
       #---
@@ -1178,6 +1441,12 @@ class Scene_Battle < Scene_Base
         when /TELEPORT[ ](.*)/i 
           mover.screen_x = destination_x
           mover.screen_y = destination_y
+        when /JUMP[ ](.*)/i
+          arc_scan = $1.scan(/(?:ARC)[ ](\d+)/i)
+          arc = $1.to_i
+          mover.face_coordinate(destination_x, destination_y)
+          mover.create_movement(destination_x, destination_y, frames)
+          mover.create_jump(arc)
         end
       }
     #---
@@ -1210,14 +1479,12 @@ class Scene_Battle < Scene_Base
   # new method: action_pose
   #--------------------------------------------------------------------------
   def action_pose
-    return unless $imported["BattleSymphony-8D"]
-    #---
     targets = get_action_targets
     return unless targets.size > 0
     #---
     case @action_values[1]
     when "BREAK", "CANCEL", "RESET", "NORMAL"
-      targets.each { |target| next unless target.use_8d?; target.break_pose }
+      targets.each { |target| target.break_pose }
       return
     when "IDLE", "READY"
       pose_key = :ready
@@ -1250,6 +1517,8 @@ class Scene_Battle < Scene_Base
     else; return
     end
     #---
+    return unless $imported["BattleSymphony-8D"]
+    #---
     targets.each { |target| 
       next unless target.exist?
       next unless target.use_8d?
@@ -1263,14 +1532,12 @@ class Scene_Battle < Scene_Base
   # new method: action_stance
   #--------------------------------------------------------------------------
   def action_stance
-    return unless $imported["BattleSymphony-HB"]
-    #---
     targets = get_action_targets
     return unless targets.size > 0
     #---
     case @action_values[1]
     when "BREAK", "CANCEL", "RESET", "NORMAL"
-      targets.each { |target| next unless target.use_hb?; target.break_pose }
+      targets.each { |target| target.break_pose }
       return
     when "IDLE", "READY"
       pose_key = :idle
@@ -1296,12 +1563,15 @@ class Scene_Battle < Scene_Base
       pose_key = :advance
     when "ORIGIN", "BACK", "RETREAT"
       pose_key = :retreat
-    else; return
+    else
+      pose_key = @action_values[1].downcase.to_sym
     end
+    #---
+    return if !$imported["BattleSymphony-HB"] && !$imported["BattleSymphony-CBS"]
     #---
     targets.each { |target| 
       next unless target.exist?
-      next unless target.use_hb?
+      next if !target.use_hb? && !target.use_cbs?
       target.pose = pose_key
       target.force_pose = true
     }
@@ -1327,15 +1597,8 @@ class Scene_Battle < Scene_Base
   end
   
 end # Scene_Battle
-
 #==============================================================================
-# Section V. Imports Symphony Tags (S-05)
-# -----------------------------------------------------------------------------
-# This section is the field for You to create your own Symphony Tags. Please
-# read carefully the Tutorial at Creating Symphony Tags before touching this.
-#==============================================================================
-#==============================================================================
-# Å° Scene_Battle - Imported Symphony Configuration
+# ‚ñ† Scene_Battle - Imported Symphony Configuration
 #==============================================================================
 class Scene_Battle < Scene_Base
 
@@ -1368,7 +1631,7 @@ class Scene_Battle < Scene_Base
 
 end # Scene_Battle
 #==============================================================================
-# Å° Scene_Battle - Imported Symphony Actions
+# ‚ñ† Scene_Battle - Imported Symphony Actions
 #==============================================================================
 class Scene_Battle < Scene_Base
   
@@ -1382,17 +1645,8 @@ class Scene_Battle < Scene_Base
   end
   
 end # Scene_Battle
-
 #==============================================================================
-# Section VI. Sprites Initialization (S-06)
-# -----------------------------------------------------------------------------
-# This section is the first section of core script. It will Initializes and 
-# Creates Sprites for all Battlers and Maintains them.
-# -----------------------------------------------------------------------------
-# Do not touch below script unless You know what You do and How it works.
-#==============================================================================
-#==============================================================================
-# Å° Game_Battler
+# ‚ñ† Game_Battler
 #==============================================================================
 
 class Game_Battler < Game_BattlerBase
@@ -1428,6 +1682,13 @@ class Game_Battler < Game_BattlerBase
     @icons = {}
     @force_pose = false
     @reverse_pose = false
+    #---
+    @hp = 1 # Fix Change Party in Battle.
+    #---
+    @arc = 0
+    @parabola = {}
+    @f = 0
+    @arc_y = 0
   end
   
   #--------------------------------------------------------------------------
@@ -1436,6 +1697,27 @@ class Game_Battler < Game_BattlerBase
   def use_charset?
     return false
   end  
+  
+  #--------------------------------------------------------------------------
+  # new method: use_8d?
+  #--------------------------------------------------------------------------
+  def use_8d?
+    false
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: use_hb?
+  #--------------------------------------------------------------------------
+  def use_hb?
+    false
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: use_cbs?
+  #--------------------------------------------------------------------------
+  def use_cbs?
+    false
+  end
   
   #--------------------------------------------------------------------------
   # new method: emptyview?
@@ -1472,7 +1754,11 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   alias bes_on_battle_start on_battle_start
   def on_battle_start
+    reset_position
+    #---
     bes_on_battle_start
+    #---
+    return if self.actor? && !$game_party.battle_members.include?(self)
     set_default_position
   end
   
@@ -1480,21 +1766,11 @@ class Game_Battler < Game_BattlerBase
   # new method: set_default_position
   #--------------------------------------------------------------------------
   def set_default_position
-    break_pose
-    #---
-    @destination_x = nil
-    @destination_y = nil
-    #---
     @move_rate_x = 0
     @move_rate_y = 0
     #---
     @destination_x = self.screen_x
     @destination_y = self.screen_y
-    #---
-    @direction = SYMPHONY::View::PARTY_DIRECTION
-    @direction = Direction.opposite(@direction) if self.enemy?
-    #---
-    @pose = Direction.pose(@direction)
   end
   
   #--------------------------------------------------------------------------
@@ -1505,16 +1781,20 @@ class Game_Battler < Game_BattlerBase
   end
   
   #--------------------------------------------------------------------------
+  # new method: reset_position
+  #--------------------------------------------------------------------------
+  def reset_position
+    break_pose
+  end
+  
+  #--------------------------------------------------------------------------
   # new method: break_pose
   #--------------------------------------------------------------------------
   def break_pose
-    return unless SceneManager.scene.spriteset
-    return unless self.sprite
-    #---
     @direction = SYMPHONY::View::PARTY_DIRECTION
     @direction = Direction.opposite(@direction) if self.enemy?
     #---
-    @pose = Direction.pose(SYMPHONY::View::PARTY_DIRECTION)
+    @pose = Direction.pose(@direction)
     #---
     @force_pose = false
     @reverse_pose = false
@@ -1525,6 +1805,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   def pose=(pose)
     @pose = pose
+    return if self.actor? && !$game_party.battle_members.include?(self)
     self.sprite.correct_change_pose if SceneManager.scene.spriteset
   end
   
@@ -1569,11 +1850,11 @@ class Game_Battler < Game_BattlerBase
 end # Game_Battler
 
 #==============================================================================
-# Å° Game_Actor
+# ‚ñ† Game_Actor
 #==============================================================================
 
 class Game_Actor < Game_Battler
-    
+  
   #--------------------------------------------------------------------------
   # overwrite method: use_sprite?
   #--------------------------------------------------------------------------
@@ -1600,6 +1881,14 @@ class Game_Actor < Game_Battler
     return unless emptyview?
     @origin_x = @screen_x = @destination_x = self.screen_x
     @origin_y = @screen_y = @destination_y = self.screen_y
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: reset_position
+  #--------------------------------------------------------------------------
+  def reset_position
+    super
+    @origin_x = @origin_y = nil
   end
   
   #--------------------------------------------------------------------------
@@ -1653,7 +1942,7 @@ class Game_Actor < Game_Battler
 end # Game_Actor
 
 #==============================================================================
-# Å° Game_Enemy
+# ‚ñ† Game_Enemy
 #==============================================================================
 
 class Game_Enemy < Game_Battler
@@ -1681,26 +1970,24 @@ class Game_Enemy < Game_Battler
     return SceneManager.scene.spriteset.enemy_sprites.reverse[self.index]
   end
   
-#~   unless $imported["YEA-BattleEngine"]
-#~   #--------------------------------------------------------------------------
-#~   # new method: atk_animation_id1
-#~   #--------------------------------------------------------------------------
-#~   def atk_animation_id1
-#~     return enemy.attack_animation_id
-#~   end
-#~   
-#~   #--------------------------------------------------------------------------
-#~   # new method: atk_animation_id2
-#~   #--------------------------------------------------------------------------
-#~   def atk_animation_id2
-#~     return 0
-#~   end
-#~   end
+  #--------------------------------------------------------------------------
+  # new method: atk_animation_id1
+  #--------------------------------------------------------------------------
+  def atk_animation_id1
+    return enemy.atk_animation_id1
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: atk_animation_id2
+  #--------------------------------------------------------------------------
+  def atk_animation_id2
+    return enemy.atk_animation_id2
+  end
   
 end # Game_Enemy
 
 #==============================================================================
-# Å° Sprite_Battler
+# ‚ñ† Sprite_Battler
 #==============================================================================
 
 class Sprite_Battler < Sprite_Base
@@ -1754,6 +2041,24 @@ class Sprite_Battler < Sprite_Base
     @charset_shadow.x = self.x + (self.mirror ? 0 : - 2)
     @charset_shadow.y = self.y + 2
     @charset_shadow.z = self.z - 1
+    #---
+    @charset_shadow.opacity = 0 if @battler.nil?
+  end
+  
+  #--------------------------------------------------------------------------
+  # alias method: dispose
+  #--------------------------------------------------------------------------
+  alias bes_dispose dispose
+  def dispose
+    bes_dispose
+    dispose_shadow
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: dispose_shadow
+  #--------------------------------------------------------------------------
+  def dispose_shadow
+    @charset_shadow.dispose if @charset_shadow
   end
   
   #--------------------------------------------------------------------------
@@ -1808,7 +2113,7 @@ class Sprite_Battler < Sprite_Base
   # new method: graphic_changed?
   #--------------------------------------------------------------------------
   def graphic_changed?
-    self.bitmap.nil? || @character_name != @battler.character_name ||
+    @character_name != @battler.character_name ||
     @character_index != @battler.character_index
   end
   
@@ -1866,6 +2171,7 @@ class Sprite_Battler < Sprite_Base
       end
     end
     #---
+    @battler.break_pose unless pose
     direction = Direction.direction(pose)
     character_index = @character_index
     #---
@@ -1910,7 +2216,7 @@ class Sprite_Battler < Sprite_Base
 end # Sprite_Battler
 
 #==============================================================================
-# Å° Spriteset_Battle
+# ‚ñ† Spriteset_Battle
 #==============================================================================
 
 class Spriteset_Battle
@@ -1921,18 +2227,39 @@ class Spriteset_Battle
   attr_accessor :actor_sprites
   attr_accessor :enemy_sprites
   
+  #--------------------------------------------------------------------------
+  # overwrite method: create_actors
+  # Fixed Large Party.
+  #--------------------------------------------------------------------------
+  def create_actors
+    max_members = $game_party.max_battle_members
+    @actor_sprites = Array.new(max_members) { Sprite_Battler.new(@viewport1) }
+  end
+  
+  #--------------------------------------------------------------------------
+  # overwrite method: update_actors
+  # Fixed Change Party.
+  #--------------------------------------------------------------------------
+  def update_actors
+    @actor_sprites.each_with_index do |sprite, i|
+      party_member = $game_party.battle_members[i]
+      if party_member != sprite.battler
+        sprite.battler = $game_party.battle_members[i]
+        #---
+        if party_member
+          party_member.reset_position
+          party_member.correct_origin_position
+          party_member.break_pose if party_member.dead?
+        end
+        sprite.init_visibility if sprite.battler && !sprite.battler.use_custom_charset?
+      end
+      sprite.update
+    end
+  end
+  
 end # Spriteset_Battle
-
 #==============================================================================
-# Section VII. Icons Sprites Initialization (S-07)
-# -----------------------------------------------------------------------------
-# This section is the second section of core script. It will Initializes and 
-# Creates Sprites for all Object like Weapons, Items and Maintains them.
-# -----------------------------------------------------------------------------
-# Do not touch below script unless You know what You do and How it works.
-#==============================================================================
-#==============================================================================
-# Å° Sprite_Object
+# ‚ñ† Sprite_Object
 #==============================================================================
 
 class Sprite_Object < Sprite_Base
@@ -2035,6 +2362,7 @@ class Sprite_Object < Sprite_Base
       self.ox = 12
       self.oy = 24
     end
+    self.y = @battler.screen_y + @attach_y + @offset_y + @arc_y
   end
   
   #--------------------------------------------------------------------------
@@ -2224,233 +2552,8 @@ class Sprite_Object < Sprite_Base
   end
   
 end # Sprite_Object
-
 #==============================================================================
-# Section VIII. Core Script (S-08)
-# -----------------------------------------------------------------------------
-# This section is the most important section of Core SCript. It will Initialize
-# Database as well as Symphony Tags and put them in actions.
-# -----------------------------------------------------------------------------
-# Do not touch below script unless You know what You do and How it works.
-#==============================================================================
-#==============================================================================
-# Å° Regular Expression
-#==============================================================================
-
-module REGEXP
-  module SYMPHONY
-    SETUP_ANI_ON   = /<(?:SETUP_ACTION|setup action|setup)>/i
-    SETUP_ANI_OFF  = /<\/(?:SETUP_ACTION|setup action|setup)>/i
-    WHOLE_ANI_ON   = /<(?:WHOLE_ACTION|whole action|whole)>/i
-    WHOLE_ANI_OFF  = /<\/(?:WHOLE_ACTION|whole action|whole)>/i
-    TARGET_ANI_ON  = /<(?:TARGET_ACTION|target action|target)>/i
-    TARGET_ANI_OFF = /<\/(?:TARGET_ACTION|target action|target)>/i
-    FOLLOW_ANI_ON  = /<(?:FOLLOW_ACTION|follow action|follow)>/i
-    FOLLOW_ANI_OFF = /<\/(?:FOLLOW_ACTION|follow action|follow)>/i
-    FINISH_ANI_ON  = /<(?:FINISH_ACTION|finish action|finish)>/i
-    FINISH_ANI_OFF = /<\/(?:FINISH_ACTION|finish action|finish)>/i
-    
-    SYMPHONY_TAG_NONE = /[ ]*(.*)/i
-    SYMPHONY_TAG_VALUES = /[ ]*(.*):[ ]*(.*)/i
-    
-    ATK_ANI = /<(?:ATK_ANI|atk ani):[ ]*(\d+)>/i
-
-  end
-end
-
-# Scan values: /\w+[\s*\w+]*/i
-
-#==============================================================================
-# Å° DataManager
-#==============================================================================
-
-module DataManager
-  
-  #--------------------------------------------------------------------------
-  # alias method: load_database
-  #--------------------------------------------------------------------------
-  class <<self; alias load_database_bes load_database; end
-  def self.load_database
-    load_database_bes
-    load_notetags_bes
-  end
-  
-  #--------------------------------------------------------------------------
-  # new method: load_notetags_bes
-  #--------------------------------------------------------------------------
-  def self.load_notetags_bes
-    groups = [$data_skills, $data_items, $data_weapons, $data_enemies]
-    groups.each { |group|
-      group.each { |obj|
-        next if obj.nil?
-        obj.battle_symphony_initialize
-      }
-    }
-  end
-  
-end # DataManager
-
-#==============================================================================
-# Å° RPG::BaseItem
-#==============================================================================
-
-class RPG::BaseItem
-  
-  #--------------------------------------------------------------------------
-  # * Public Instance Variables
-  #--------------------------------------------------------------------------
-  attr_accessor :setup_actions_list 
-  attr_accessor :whole_actions_list
-  attr_accessor :target_actions_list
-  attr_accessor :follow_actions_list
-  attr_accessor :finish_actions_list
-  attr_accessor :attack_animation_id
-  
-  #--------------------------------------------------------------------------
-  # new method: battle_symphony_initialize
-  #--------------------------------------------------------------------------
-  def battle_symphony_initialize
-#~     create_default_animation
-    create_default_symphony
-    create_tags_symphony
-  end
-  
-  #--------------------------------------------------------------------------
-  # new method: create_default_animation
-  #--------------------------------------------------------------------------
-  def create_default_animation
-    @attack_animation_id = SYMPHONY::Visual::ENEMY_ATTACK_ANIMATION
-    self.note.split(/[\r\n]+/).each { |line|
-      case line
-      when REGEXP::SYMPHONY::ATK_ANI
-        @attack_animation_id = $1.to_i
-      end
-    }
-  end
-  
-  #--------------------------------------------------------------------------
-  # new method: create_default_symphony
-  #--------------------------------------------------------------------------
-  def create_default_symphony
-    @setup_actions_list = []; @finish_actions_list = []
-    @whole_actions_list = []; @target_actions_list = []
-    @follow_actions_list = []
-    #---
-    if self.is_a?(RPG::Skill) and !self.physical?
-      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_SETUP
-      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_WHOLE
-      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_TARGET
-      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_FOLLOW
-      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::MAGIC_FINISH
-      return
-    elsif self.is_a?(RPG::Skill) and self.physical?
-      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_SETUP
-      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_WHOLE
-      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_TARGET
-      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_FOLLOW
-      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::PHYSICAL_FINISH
-      return
-    elsif self.is_a?(RPG::Item)
-      @setup_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_SETUP
-      @whole_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_WHOLE
-      @target_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_TARGET
-      @follow_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_FOLLOW
-      @finish_actions_list = SYMPHONY::DEFAULT_ACTIONS::ITEM_FINISH
-      return
-    end
-  end
-  
-  #--------------------------------------------------------------------------
-  # new method: create_tags_symphony
-  #--------------------------------------------------------------------------
-  def create_tags_symphony
-    self.note.split(/[\r\n]+/).each { |line|
-      case line
-      when REGEXP::SYMPHONY::SETUP_ANI_ON
-        @symphony_tag = true
-        @setup_actions_list = []
-        @setup_action_flag = true
-      when REGEXP::SYMPHONY::SETUP_ANI_OFF
-        @symphony_tag = false
-        @setup_action_flag = false
-      when REGEXP::SYMPHONY::WHOLE_ANI_ON
-        @symphony_tag = true
-        @whole_actions_list = []
-        @whole_action_flag = true
-      when REGEXP::SYMPHONY::WHOLE_ANI_OFF
-        @symphony_tag = false
-        @whole_action_flag = false
-      when REGEXP::SYMPHONY::TARGET_ANI_ON
-        @symphony_tag = true
-        @target_actions_list = []
-        @target_action_flag = true
-      when REGEXP::SYMPHONY::TARGET_ANI_OFF
-        @symphony_tag = false
-        @target_action_flag = false
-      when REGEXP::SYMPHONY::FOLLOW_ANI_ON
-        @symphony_tag = true
-        @follow_actions_list = []
-        @follow_action_flag = true
-      when REGEXP::SYMPHONY::FOLLOW_ANI_OFF
-        @symphony_tag = false
-        @follow_action_flag = false
-      when REGEXP::SYMPHONY::FINISH_ANI_ON
-        @symphony_tag = true
-        @finish_actions_list = []
-        @finish_action_flag = true
-      when REGEXP::SYMPHONY::FINISH_ANI_OFF
-        @symphony_tag = false
-        @finish_action_flag = false
-      #---
-      else
-        next unless @symphony_tag
-        case line
-        when REGEXP::SYMPHONY::SYMPHONY_TAG_VALUES
-          action = $1
-          value = $2.scan(/[^, ]+[^,]*/i)
-        when REGEXP::SYMPHONY::SYMPHONY_TAG_NONE
-          action = $1
-          value = [nil]
-        else; next
-        end
-        array = [action, value]
-        if @setup_action_flag
-          @setup_actions_list.push(array)
-        elsif @whole_action_flag
-          @whole_actions_list.push(array)
-        elsif @target_action_flag
-          @target_actions_list.push(array)
-        elsif @follow_action_flag
-          @follow_actions_list.push(array)
-        elsif @finish_action_flag
-          @finish_actions_list.push(array)
-        end
-      end
-    }
-  end
-  
-  #--------------------------------------------------------------------------
-  # new method: valid_actions?
-  #--------------------------------------------------------------------------
-  def valid_actions?(phase)
-    case phase
-    when :setup
-      return @setup_actions_list.size > 0
-    when :whole
-      return @whole_actions_list.size > 0
-    when :target
-      return @target_actions_list.size > 0
-    when :follow
-      return @follow_actions_list.size > 0
-    when :finish
-      return @finish_actions_list.size > 0
-    end
-  end
-  
-end # RPG::BaseItem
-
-#==============================================================================
-# Å° Direction
+# ‚ñ† Direction
 #==============================================================================
 
 module Direction
@@ -2546,7 +2649,7 @@ module Direction
 end # Direction
 
 #==============================================================================
-# Å° Game_ActionResult
+# ‚ñ† Game_ActionResult
 #==============================================================================
 
 class Game_ActionResult
@@ -2688,10 +2791,26 @@ class Game_ActionResult
 end # Game_ActionResult
 
 #==============================================================================
-# Å° Game_Battler
+# ‚ñ† Game_Battler
 #==============================================================================
 
 class Game_Battler < Game_BattlerBase
+  
+  #--------------------------------------------------------------------------
+  # new method: backup_actions
+  #--------------------------------------------------------------------------
+  def backup_actions
+    @backup_actions = @actions.dup if @actions
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: restore_actions
+  #--------------------------------------------------------------------------
+  def restore_actions
+    @actions = @backup_actions.dup if @backup_actions
+    @backup_actions.clear
+    @backup_actions = nil
+  end
   
   #--------------------------------------------------------------------------
   # alias method: item_cnt
@@ -2708,6 +2827,7 @@ class Game_Battler < Game_BattlerBase
   alias bes_item_mrf item_mrf
   def item_mrf(user, item)
     return 0 unless @result.check_reflection?
+    return 0 if @magic_reflection
     return bes_item_mrf(user, item)
   end
   
@@ -2777,7 +2897,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   def face_coordinate(destination_x, destination_y)
     direction = Direction.face_coordinate(self.screen_x, self.screen_y, destination_x, destination_y)
-    direction = Direction.opposite(direction) if self.sprite.mirror
+    #direction = Direction.opposite(direction) if self.sprite.mirror
     @direction = direction
     return if $imported["BattleSymphony-HB"] && self.use_hb?
     return if SYMPHONY::Visual::DISABLE_AUTO_MOVE_POSE && self.use_custom_charset?
@@ -2792,8 +2912,21 @@ class Game_Battler < Game_BattlerBase
     @destination_x = destination_x
     @destination_y = destination_y
     frames = [frames, 1].max
+    @f = frames.to_f / 2
     @move_x_rate = [(@screen_x - @destination_x).abs / frames, 2].max
     @move_y_rate = [(@screen_y - @destination_y).abs / frames, 2].max
+  end
+  
+  #--------------------------------------------------------------------------
+  # new method: create_jump
+  #--------------------------------------------------------------------------
+  def create_jump(arc)
+    @arc = arc
+    @parabola[:x] = 0
+    @parabola[:y0] = 0
+    @parabola[:y1] = @destination_y - @screen_y
+    @parabola[:h]  = - (@parabola[:y0] + @arc * 5)
+    @parabola[:d]  = (@screen_x - @destination_x).abs
   end
   
   #--------------------------------------------------------------------------
@@ -2857,6 +2990,32 @@ class Game_Battler < Game_BattlerBase
   end
   
   #--------------------------------------------------------------------------
+  # new method: update_jump
+  #--------------------------------------------------------------------------
+  def update_jump
+    return unless self.is_moving?
+    #---
+    value = [(@screen_x - @destination_x).abs, @move_x_rate].min
+    @screen_x += (@destination_x > @screen_x) ? value : -value
+    @parabola[:x] += value
+    @screen_y -= @arc_y
+    #---
+    if @destination_x == @screen_x
+      @screen_y = @destination_y
+      @arc_y = 0
+      @arc = 0
+    else
+      a = (2.0*(@parabola[:y0]+@parabola[:y1])-4*@parabola[:h])/(@parabola[:d]**2)
+      b = (@parabola[:y1]-@parabola[:y0]-a*(@parabola[:d]**2))/@parabola[:d]
+      @arc_y = a * @parabola[:x] * @parabola[:x] + b * @parabola[:x] + @parabola[:y0]
+    end
+    #---
+    @screen_y += @arc_y
+    @move_x_rate = 0 if @screen_x == @destination_x
+    @move_y_rate = 0 if @screen_y == @destination_y
+  end
+  
+  #--------------------------------------------------------------------------
   # new method: update_icons
   #--------------------------------------------------------------------------
   def update_icons
@@ -2872,7 +3031,7 @@ class Game_Battler < Game_BattlerBase
     return unless SceneManager.scene.spriteset
     correct_origin_position
     #---
-    update_movement
+    @arc == 0 ? update_movement : update_jump
     update_icons
   end
   
@@ -2893,7 +3052,7 @@ class Game_Battler < Game_BattlerBase
 end # Game_Battler
 
 #==============================================================================
-# Å° Sprite_Battler
+# ‚ñ† Sprite_Battler
 #==============================================================================
 
 class Sprite_Battler < Sprite_Base
@@ -2909,7 +3068,7 @@ class Sprite_Battler < Sprite_Base
 end # Sprite_Battler
 
 #==============================================================================
-# Å° Spriteset_Battle
+# ‚ñ† Spriteset_Battle
 #==============================================================================
 
 class Spriteset_Battle
@@ -2924,7 +3083,7 @@ class Spriteset_Battle
 end # Spriteset_Battle
 
 #==============================================================================
-# Å° Window_BattleLog
+# ‚ñ† Window_BattleLog
 #==============================================================================
 
 class Window_BattleLog < Window_Selectable
@@ -2934,7 +3093,7 @@ class Window_BattleLog < Window_Selectable
 end # Window_BattleLog
 
 #==============================================================================
-# Å° Scene_Battle
+# ‚ñ† Scene_Battle
 #==============================================================================
 
 class Scene_Battle < Scene_Base
@@ -2982,11 +3141,21 @@ class Scene_Battle < Scene_Base
     #--- Finish Actions ---
     actions_list = item.finish_actions_list
     actions_list = weapon.finish_actions_list if w_action && weapon.valid_actions?(:finish)
+    immortal_flag = ["IMMORTAL", ["TARGETS", "FALSE"]]
+    if !actions_list.include?(immortal_flag)
+      if SYMPHONY::Fixes::AUTO_IMMORTAL_OFF
+        actions_list = [immortal_flag] + actions_list
+      end
+    end
     perform_actions_list(actions_list, targets)
     #--- YEA - Lunatic Object
     if $imported["YEA-LunaticObjects"]
       lunatic_object_effect(:after, item, @subject, @subject)
     end
+    targets.each { |target| 
+      next unless target.actor?
+      @status_window.draw_item(target.index)
+    }
   end
   
   #--------------------------------------------------------------------------
@@ -3026,8 +3195,10 @@ class Scene_Battle < Scene_Base
       battler.result.set_calc; battler.result.clear
       battler.clear_icons
       battler.set_default_position
+      battler.break_pose
     }
     $game_troop.screen.clear_bes_ve if $imported["BattleSymphony-VisualEffect"]
+    @status_window.draw_item(@status_window.index)
   end
   
   #--------------------------------------------------------------------------
@@ -3035,10 +3206,22 @@ class Scene_Battle < Scene_Base
   #--------------------------------------------------------------------------
   def invoke_counter_attack(target, item)
     @log_window.display_counter(target, item)
+    last_subject = @subject
     @counter_subject = target
+    @subject = target
+    #---
+    @subject.backup_actions
+    #---
+    @subject.make_actions
+    @subject.current_action.set_attack
     #---
     actions_list = SYMPHONY::DEFAULT_ACTIONS::COUNTER_ACTION
-    perform_actions_list(actions_list, [@subject])
+    perform_actions_list(actions_list, [last_subject])
+    #---
+    @subject.clear_actions
+    @subject = last_subject
+    #---
+    @counter_subject.restore_actions
     #---
     @counter_subject = nil
     @log_window.display_action_results(@subject, item)
@@ -3051,17 +3234,44 @@ class Scene_Battle < Scene_Base
   # overwrite method: invoke_magic_reflection
   #--------------------------------------------------------------------------
   def invoke_magic_reflection(target, item)
+    @subject.magic_reflection = true
     @log_window.display_reflection(target, item)
+    last_subject = @subject
     @reflect_subject = target
+    @subject = target
+    #---
+    @subject.backup_actions
+    #---
+    @subject.make_actions
+    if item.is_a?(RPG::Skill); @subject.current_action.set_skill(item.id)
+      else; @subject.current_action.set_item(item.id); end
     #---
     actions_list = SYMPHONY::DEFAULT_ACTIONS::REFLECT_ACTION
-    perform_actions_list(actions_list, [@subject])
+    perform_actions_list(actions_list, [last_subject])
+    #---
+    @subject.clear_actions
+    @subject = last_subject
+    #---
+    @reflect_subject.restore_actions
     #---
     @reflect_subject = nil
     @log_window.display_action_results(@subject, item)
     refresh_status
     perform_collapse_check(@subject)
     perform_collapse_check(target)
+    @subject.magic_reflection = false
+  end
+  
+  #--------------------------------------------------------------------------
+  # alias method: apply_substitute
+  #--------------------------------------------------------------------------
+  alias bes_apply_substitute apply_substitute
+  def apply_substitute(target, item)
+    substitute = bes_apply_substitute(target, item)
+    if target != substitute
+      @substitute_subject = substitute
+    end
+    return substitute
   end
     
   #--------------------------------------------------------------------------
@@ -3104,9 +3314,3 @@ class Scene_Battle < Scene_Base
 #~   end
   
 end # Scene_Battle
-
-#===============================================================================
-# 
-# END OF FILE
-# 
-#===============================================================================

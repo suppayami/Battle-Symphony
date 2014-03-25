@@ -1,4 +1,9 @@
-Battle-Symphony
-===============
+Battle Engine Symphony
+==============
 
-A battle engine for making games in RPG Maker VX Ace.
+A sideview battle system for RPG Maker VX Ace.
+This project follows MIT License.
+
+## Build  
+Run this command to combine symphony source into one file.
+`ruby build.rb`
