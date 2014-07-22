@@ -263,6 +263,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   alias bes_item_cnt item_cnt
   def item_cnt(user, item)
+    return 0 unless movable?
     return 0 unless @result.check_counter?
     return bes_item_cnt(user, item)
   end
@@ -272,6 +273,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   alias bes_item_mrf item_mrf
   def item_mrf(user, item)
+    return 0 unless movable?
     return 0 unless @result.check_reflection?
     return 0 if @magic_reflection
     return bes_item_mrf(user, item)
