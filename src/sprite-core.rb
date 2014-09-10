@@ -243,6 +243,14 @@ end # Game_ActionResult
 class Game_Battler < Game_BattlerBase
   
   #--------------------------------------------------------------------------
+  # new method: force_make_actions
+  #--------------------------------------------------------------------------
+  def force_make_actions
+    clear_actions
+    @actions = Array.new(make_action_times) { Game_Action.new(self) }
+  end
+  
+  #--------------------------------------------------------------------------
   # new method: backup_actions
   #--------------------------------------------------------------------------
   def backup_actions
@@ -263,7 +271,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   alias bes_item_cnt item_cnt
   def item_cnt(user, item)
-    return 0 unless movable?
+    return 0 if !movable? && !SYMPHONY::Fixes::ALWAYS_COUNTER
     return 0 unless @result.check_counter?
     return bes_item_cnt(user, item)
   end
@@ -273,7 +281,7 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   alias bes_item_mrf item_mrf
   def item_mrf(user, item)
-    return 0 unless movable?
+    return 0 if !movable? && !SYMPHONY::Fixes::ALWAYS_COUNTER
     return 0 unless @result.check_reflection?
     return 0 if @magic_reflection
     return bes_item_mrf(user, item)
@@ -660,7 +668,7 @@ class Scene_Battle < Scene_Base
     #---
     @subject.backup_actions
     #---
-    @subject.make_actions
+    @subject.force_make_actions
     @subject.current_action.set_attack
     #---
     actions_list = SYMPHONY::DEFAULT_ACTIONS::COUNTER_ACTION
@@ -690,7 +698,7 @@ class Scene_Battle < Scene_Base
     #---
     @subject.backup_actions
     #---
-    @subject.make_actions
+    @subject.force_make_actions
     if item.is_a?(RPG::Skill); @subject.current_action.set_skill(item.id)
       else; @subject.current_action.set_item(item.id); end
     #---
