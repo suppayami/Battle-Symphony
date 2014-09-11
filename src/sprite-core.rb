@@ -391,7 +391,6 @@ class Game_Battler < Game_BattlerBase
   def create_icon(symbol, icon_id = 0)
     delete_icon(symbol)
     #---
-    icon = Sprite_Object.new(self.sprite.viewport)
     case symbol
     when :weapon1
       object = self.weapons[0]
@@ -407,6 +406,8 @@ class Game_Battler < Game_BattlerBase
       icon_id = object.nil? ? nil : object.icon_index
     else; end
     return if icon_id.nil? || icon_id <= 0
+    #---
+    icon = Sprite_Object.new(self.sprite.viewport)
     icon.set_icon(icon_id)
     icon.set_battler(self)
     #---
@@ -503,6 +504,15 @@ class Game_Battler < Game_BattlerBase
   #--------------------------------------------------------------------------
   def dual_attack?
     self.actor? && self.current_action.attack? && self.dual_wield? && self.weapons.size > 1
+  end
+  
+  #--------------------------------------------------------------------------
+  # alias method: on_battle_end
+  #--------------------------------------------------------------------------
+  alias bes_on_battle_end on_battle_end
+  def on_battle_end
+    bes_on_battle_end
+    clear_icons
   end
   
 end # Game_Battler
